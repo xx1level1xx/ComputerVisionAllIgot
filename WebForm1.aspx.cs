@@ -203,7 +203,7 @@ namespace Camera_Final_4
             var authToken = "27284f81b9db175192842b596ab70100";
             TwilioClient.Init(accountSid, authToken);
             var mediaUrl = new[] {
-            new Uri("http://www.sample4321.sample.com/Images/test60.jpg")
+            new Uri("http://www.sample4321.sample.com/Images/test60.png")
             }.ToList();
             var message = MessageResource.Create(
                  body: "Detected at "+ DateTime.Now.TimeOfDay.ToString(),

@@ -25,7 +25,7 @@ namespace Camera_Final_4
         /*static void ParallelTest()
         {
             SqlConnection con = new SqlConnection();
-            con.ConnectionString = "workstation id=ImageImage.mssql.somee.com;packet size=4096;user id=xx2level2xx_SQLLogin_1;pwd=s6z2qnz8el;data source=ImageImage.mssql.somee.com;persist security info=False;initial catalog=ImageImage;";
+            con.ConnectionString = "workstation id=ImageImage.mssql.sample.com;packet size=4096;user id=xx2level2xx_Sample;pwd=samplePass;data source=ImageImage.mssql.sample.com;persist security info=False;initial catalog=ImageImage;";
             con.Open();
             SqlCommand cmd;
             SqlDataReader rd;
@@ -115,7 +115,7 @@ namespace Camera_Final_4
         {
             //ParallelTest();
             SqlConnection con = new SqlConnection();
-            con.ConnectionString = "workstation id=ImageImage.mssql.somee.com;packet size=4096;user id=xx2level2xx_SQLLogin_1;pwd=s6z2qnz8el;data source=ImageImage.mssql.somee.com;persist security info=False;initial catalog=ImageImage;";
+            con.ConnectionString = "workstation id=ImageImage.mssql.sample.com;packet size=4096;user id=xx2level2xx_Sample;pwd=samplePass;data source=ImageImage.mssql.sample.com;persist security info=False;initial catalog=ImageImage;";
             con.Open();
             SqlCommand cmd;
             SqlDataReader rd;
@@ -198,6 +198,20 @@ namespace Camera_Final_4
             Mat final = original.Mat;
             Bitmap test = new Bitmap(final.Bitmap);
             test.Save(Server.MapPath("~/Images/" + "test60.png"), System.Drawing.Imaging.ImageFormat.Png);
+
+            var accountSid = "Sample";
+            var authToken = "27284f81b9db175192842b596ab70100";
+            TwilioClient.Init(accountSid, authToken);
+            var mediaUrl = new[] {
+            new Uri("http://www.sample4321.sample.com/Images/test60.jpg")
+            }.ToList();
+            var message = MessageResource.Create(
+                 body: "Detected at "+ DateTime.Now.TimeOfDay.ToString(),
+                 mediaUrl: mediaUrl,
+                 from: new Twilio.Types.PhoneNumber("+14153476915"),
+                 to: new Twilio.Types.PhoneNumber("+1626sampleNOW")
+             );
+            Console.WriteLine(message.Body);
             con.Close();
         }
         static private int convert(string num)

@@ -12,81 +12,85 @@
 #include <cstdlib>
 #include <fstream>
 #include <cctype>
-#include <SQLAPI.h>
+//#include <cassert>
 using namespace cv;
 using namespace std;
 
-Mat src, src_gray;
-int thresh = 190;
-int max_thresh = 255;
 const char* source_window = "Source image";
 const char* corners_window = "Corners detected";
 double square(double);
 int convert(string);
 int power10(int);
-string int2String(int num);
-int main(){
+//#pragma warning(push)
+//#pragma warning(disable: 0000005)
+int main() {
+	Mat src, src_gray, tempMat; //tempMat2;
+	int thresh = 190;
+	int max_thresh = 255;
 	VideoCapture cap("survey.avi");
-	if(!cap.isOpened()){
-		cout<<"Error opening video stream of file"<<endl;
+	if (!cap.isOpened()) {
+		cout << "Error opening video stream of file" << endl;
 		system("pause");
 		return 0;
 	}
 	ofstream fout;
 	fout.open("data.txt");
 	//Getting the x and y coordinate of the center of the corner circles of ten sampled images
-	int numLoop=0;
-	int numCorners=0;
-	const int numTrainingPictures=10;
-	const int SIZE=20;
+	int numLoop = 0;
+	int numCorners = 0;
+	const int numTrainingPictures = 10;
+	const int SIZE = 20;
 	//int* numCornersArr=new int[SIZE];//////////////////////////////////////////////////////////////////////////////////
 	int numCornersArr[numTrainingPictures];
-	while(1){
-		cap>>src;
-		if(src.empty()){
+
+	while (1) {
+		cap >> src;
+		if (src.empty()) {
 			break;
 		}
-		cvtColor(src,src_gray,COLOR_BGR2GRAY);
+		Size size = src.size();
+		cvtColor(src, src_gray, COLOR_BGR2GRAY);
 
 		int blockSize = 2;
 		int apertureSize = 3;
 		double k = 0.04;
 
-		Mat dst = Mat::zeros( src.size(), CV_32FC1 );
-		cornerHarris( src_gray, dst, blockSize, apertureSize, k );
+		tempMat = Mat::zeros(size, CV_32FC1);
+		cornerHarris(src_gray, tempMat, blockSize, apertureSize, k);
 
-		Mat dst_norm, dst_norm_scaled;
-		normalize( dst, dst_norm, 0, 255, NORM_MINMAX, CV_32FC1, Mat() );
-		convertScaleAbs( dst_norm, dst_norm_scaled );
-		numCorners=0;
-		for( int i = 0; i < dst_norm.rows ; i++ )
+		//Mat dst_norm;//, dst_norm_scaled;
+		//Mat temp2;
+		normalize(tempMat, src_gray, 0, 255, NORM_MINMAX, CV_32FC1, Mat());
+		//convertScaleAbs( dst_norm, dst_norm_scaled );
+		numCorners = 0;
+		for (int i = 0; i < src_gray.rows; i++)
 		{
-			for( int j = 0; j < dst_norm.cols; j++ )
+			for (int j = 0; j < src_gray.cols; j++)
 			{
-				if( (int) dst_norm.at<float>(i,j) > thresh )//tried to be the same
+				if ((int)src_gray.at<float>(i, j) > thresh)//tried to be the same
 				{
 					//circle( dst_norm_scaled, Point(j,i), 5,  Scalar(0), 2, 8, 0 );
-					circle( src, Point(j,i), 5,  Scalar(0), 2, 8, 0 );
+					circle(src, Point(j, i), 5, Scalar(0), 2, 8, 0);
 					numCorners++;
 				}
 			}
 		}
-		numCornersArr[numLoop]=numCorners;
-		imshow("Frame",src);
+		numCornersArr[numLoop] = numCorners;
+		imshow("Frame", src);
 		char c = (char)waitKey(25);
-		if(c==27){
+		if (c == 27) {
 			break;
 		}
 		numLoop++;
-		if(numLoop==numTrainingPictures){
+		if (numLoop == numTrainingPictures) {
 			break;
 		}
 	}
 	cap.release();
 	destroyAllWindows();
-	for(int i=0;i<numLoop;i++){
+	for (int i = 0;i < numLoop;i++) {
 		//fout<<i+1<<" "<<numCornersArr[i]<<endl;
-		fout<<numCornersArr[i]<<endl;
+		fout << numCornersArr[i] << endl;
 	}
 	fout.close();
 
@@ -95,16 +99,16 @@ int main(){
 	char corner;
 	//int* corners=new int[numTrainingPictures];//////////////////////////////////////////////////////////////////////////////////
 	int corners[numTrainingPictures];
-	bool first=true;
-	int numCornersEachPicture=0;
-	string temp="";
-	while(fin.get(corner)){
-		if(isdigit(corner)){
-			temp+=corner;
+	bool first = true;
+	int numCornersEachPicture = 0;
+	string temp = "";
+	while (fin.get(corner)) {
+		if (isdigit(corner)) {
+			temp += corner;
 		}
-		else{
-			corners[numCornersEachPicture]=convert(temp);
-			temp="";
+		else {
+			corners[numCornersEachPicture] = convert(temp);
+			temp = "";
 			numCornersEachPicture++;
 		}
 	}
@@ -114,25 +118,25 @@ int main(){
 	//int* y=new int[corners[numCorners-1]];//////////////////////////////////////////////////////////////////////////////////
 	int* x[numTrainingPictures];
 	int* y[numTrainingPictures];
-	for(int i=0;i<numTrainingPictures;i++){
-		x[i]=new int[corners[i]];
-		y[i]=new int[corners[i]];
+	for (int i = 0;i < numTrainingPictures;i++) {
+		x[i] = new int[corners[i]];
+		y[i] = new int[corners[i]];
 	}
 
 	cap.open("Survey.avi");
-	numLoop=0;
-	numCorners=0;
+	numLoop = 0;
+	numCorners = 0;
 	int numCornersEachLoop = 0;
 	int temp2;
 
 	int count3;
 	bool repeatX;
 	int beginning;
-	int diffEachSetSquaredX=25;
-	first=true;
+	int diffEachSetSquaredX = 25;
+	first = true;
 	int prev;
-	numLoop=0;
-	int count=0;
+	numLoop = 0;
+	int count = 0;
 	/*int** medianX = new int*[SIZE];//////////////////////////////////////////////////////////////////////////////////
 	for(int i=0;i<SIZE;i++){
 		medianX[i]=new int[30];
@@ -156,133 +160,135 @@ int main(){
 	int xCluster[SIZE][30];
 	int yCluster[SIZE][30];
 	cap.open("survey.avi");
-	if(!cap.isOpened()){
-		cout<<"Error opening video stream of file"<<endl;
+	if (!cap.isOpened()) {
+		cout << "Error opening video stream of file" << endl;
 		system("pause");
 		return 0;
 	}
-	numLoop=0;
+	numLoop = 0;
 	int numCluster[numTrainingPictures];
-	while(1){
-		cap>>src;
-		if(src.empty()){
+	while (1) {
+		cap >> src;
+		if (src.empty()) {
 			break;
 		}
-		cvtColor(src,src_gray,COLOR_BGR2GRAY);
+		Size size = src.size();
+		cvtColor(src, src_gray, COLOR_BGR2GRAY);
 
 		int blockSize = 2;
 		int apertureSize = 3;
 		double k = 0.04;
 
-		Mat dst = Mat::zeros( src.size(), CV_32FC1 );
-		cornerHarris( src_gray, dst, blockSize, apertureSize, k );
+		tempMat = Mat::zeros(size, CV_32FC1);
+		cornerHarris(src_gray, tempMat, blockSize, apertureSize, k);
 
-		Mat dst_norm, dst_norm_scaled;
-		normalize( dst, dst_norm, 0, 255, NORM_MINMAX, CV_32FC1, Mat() );
-		convertScaleAbs( dst_norm, dst_norm_scaled );
-		numCornersEachLoop=0;
-		for( int i = 0; i < dst_norm.rows ; i++ )
+		//Mat dst_norm;//, dst_norm_scaled;
+		//Mat temp2;
+		normalize(tempMat, src_gray, 0, 255, NORM_MINMAX, CV_32FC1, Mat());
+		//convertScaleAbs( dst_norm, dst_norm_scaled );
+		numCornersEachLoop = 0;
+		for (int i = 0; i < src_gray.rows; i++)
 		{
-			for( int j = 0; j < dst_norm.cols; j++ )
+			for (int j = 0; j < src_gray.cols; j++)
 			{
-				if( (int) dst_norm.at<float>(i,j) > thresh )//tried to be the same
+				if ((int)src_gray.at<float>(i, j) > thresh)//tried to be the same
 				{
 					//circle( dst_norm_scaled, Point(j,i), 5,  Scalar(0), 2, 8, 0 );
 					//circle( src, Point(j,i), 5,  Scalar(0), 2, 8, 0 );
-					x[numLoop][numCornersEachLoop]=j;
-					y[numLoop][numCornersEachLoop]=i;
+					x[numLoop][numCornersEachLoop] = j;
+					y[numLoop][numCornersEachLoop] = i;
 					numCornersEachLoop++;
 				}
 			}
 		}
 		//sort
-		for(int i=0;i<numCornersEachLoop-1;i++){
-			for(int j=i+1;j<numCornersEachLoop;j++){
-				if(x[numLoop][i]>x[numLoop][j]){
-					temp2=x[numLoop][i];
-					x[numLoop][i]=x[numLoop][j];
-					x[numLoop][j]=temp2;
-					temp2=y[numLoop][i];
-					y[numLoop][i]=y[numLoop][j];
-					y[numLoop][j]=temp2;
+		for (int i = 0;i < numCornersEachLoop - 1;i++) {
+			for (int j = i + 1;j < numCornersEachLoop;j++) {
+				if (x[numLoop][i] > x[numLoop][j]) {
+					temp2 = x[numLoop][i];
+					x[numLoop][i] = x[numLoop][j];
+					x[numLoop][j] = temp2;
+					temp2 = y[numLoop][i];
+					y[numLoop][i] = y[numLoop][j];
+					y[numLoop][j] = temp2;
 				}
 			}
 		}
 		//sort again for the similar x's so the same x with very different y would be in a different cluster
-		count3=0;
-		repeatX=false;
-		prev=x[numLoop][0];
-		bool first=true;
-		for(int i=0;i<numCornersEachLoop-1;i++){
-			count3=0;
-			if(first){
-				first=false;
-				beginning=i;
-				prev=x[numLoop][i];
+		count3 = 0;
+		repeatX = false;
+		prev = x[numLoop][0];
+		bool first = true;
+		for (int i = 0;i < numCornersEachLoop - 1;i++) {
+			count3 = 0;
+			if (first) {
+				first = false;
+				beginning = i;
+				prev = x[numLoop][i];
 			}
-			else{
-				while(i+count3+1<numCornersEachLoop&&square(prev-x[numLoop][i+count3+1])<=diffEachSetSquaredX){
+			else {
+				while (i + count3 + 1 < numCornersEachLoop&&square(prev - x[numLoop][i + count3 + 1]) <= diffEachSetSquaredX) {
 					count3++;
-					repeatX=true;
+					repeatX = true;
 				}
-				if(repeatX){
-					i=i+count3+1;
-					for(int j=beginning;j<i-beginning-1+beginning;j++){
-						for(int k=j+1;k<i-beginning+beginning;k++){
-							if(y[numLoop][j]>y[numLoop][k]){
-								temp2=y[numLoop][j];
-								y[numLoop][j]=y[numLoop][k];
-								y[numLoop][k]=temp2;
-								temp2=x[numLoop][j];
-								x[numLoop][j]=x[numLoop][k];
-								x[numLoop][k]=temp2;
+				if (repeatX) {
+					i = i + count3 + 1;
+					for (int j = beginning;j < i - beginning - 1 + beginning;j++) {
+						for (int k = j + 1;k < i - beginning + beginning;k++) {
+							if (y[numLoop][j] > y[numLoop][k]) {
+								temp2 = y[numLoop][j];
+								y[numLoop][j] = y[numLoop][k];
+								y[numLoop][k] = temp2;
+								temp2 = x[numLoop][j];
+								x[numLoop][j] = x[numLoop][k];
+								x[numLoop][k] = temp2;
 							}
 						}
 					}
 					i--;
-					repeatX=false;
+					repeatX = false;
 				}
-				first=true;
+				first = true;
 			}
 		}
-		count=0;
-		bool newSet=true;
-		for(int i=0;i<numCornersEachLoop;i++){
-			if(newSet){
-				numPtsEachCluster[count]=0;
-				xCluster[count][numPtsEachCluster[count]]=x[numLoop][i];
-				yCluster[count][numPtsEachCluster[count]]=y[numLoop][i];
+		count = 0;
+		bool newSet = true;
+		for (int i = 0;i < numCornersEachLoop;i++) {
+			if (newSet) {
+				numPtsEachCluster[count] = 0;
+				xCluster[count][numPtsEachCluster[count]] = x[numLoop][i];
+				yCluster[count][numPtsEachCluster[count]] = y[numLoop][i];
 				numPtsEachCluster[count]++;
-				newSet=false;
+				newSet = false;
 			}
-			else{
-				if((square(xCluster[count][0] - x[numLoop][i]) > 49)||(square(yCluster[count][0] - y[numLoop][i]) > 49)){///////////////////////////////////////////////////////////////////////49
-					newSet=true;
+			else {
+				if ((square(xCluster[count][0] - x[numLoop][i]) > 49) || (square(yCluster[count][0] - y[numLoop][i]) > 49)) {///////////////////////////////////////////////////////////////////////49
+					newSet = true;
 					count++;
 					i--;
 				}
-				else{
-					xCluster[count][numPtsEachCluster[count]]=x[numLoop][i];
-					yCluster[count][numPtsEachCluster[count]]=y[numLoop][i];
+				else {
+					xCluster[count][numPtsEachCluster[count]] = x[numLoop][i];
+					yCluster[count][numPtsEachCluster[count]] = y[numLoop][i];
 					numPtsEachCluster[count]++;
 				}
 			}
 		}
 		count++;
-		numCluster[numLoop]=count;
-		for(int i=0;i<count;i++){
-			if(numPtsEachCluster[i]%2==0){
-				medianX[numLoop][i]=(xCluster[i][numPtsEachCluster[i]/2-1]+xCluster[i][numPtsEachCluster[i]/2])/2.0;
-				medianY[numLoop][i]=(yCluster[i][numPtsEachCluster[i]/2-1]+yCluster[i][numPtsEachCluster[i]/2])/2.0;
+		numCluster[numLoop] = count;
+		for (int i = 0;i < count;i++) {
+			if (numPtsEachCluster[i] % 2 == 0) {
+				medianX[numLoop][i] = (xCluster[i][numPtsEachCluster[i] / 2 - 1] + xCluster[i][numPtsEachCluster[i] / 2]) / 2.0;
+				medianY[numLoop][i] = (yCluster[i][numPtsEachCluster[i] / 2 - 1] + yCluster[i][numPtsEachCluster[i] / 2]) / 2.0;
 			}
-			else{
-				medianX[numLoop][i]=xCluster[i][numPtsEachCluster[i]/2];
-				medianY[numLoop][i]=yCluster[i][numPtsEachCluster[i]/2];
+			else {
+				medianX[numLoop][i] = xCluster[i][numPtsEachCluster[i] / 2];
+				medianY[numLoop][i] = yCluster[i][numPtsEachCluster[i] / 2];
 			}
 		}
 		//Evidence
 		numLoop++;
-		if(numLoop==numTrainingPictures){
+		if (numLoop == numTrainingPictures) {
 			break;
 		}
 	}
@@ -299,28 +305,28 @@ int main(){
 
 
 	//get the number of time a median point appear in ten images
-	int numTrainedMedian=0;
+	int numTrainedMedian = 0;
 	//int* savedX=new int[100];//////////////////////////////////////////////////////////////////////////////////
 	//int* savedY=new int[100];//////////////////////////////////////////////////////////////////////////////////
 	//int* countTraining=new int[100];//////////////////////////////////////////////////////////////////////////////////
 	int savedX[SIZE];
 	int savedY[SIZE];
 	int countTraining[SIZE];
-	savedX[numTrainedMedian]=medianX[0][0];
-	savedY[numTrainedMedian]=medianY[0][0];
-	countTraining[numTrainedMedian]=0;
+	savedX[numTrainedMedian] = medianX[0][0];
+	savedY[numTrainedMedian] = medianY[0][0];
+	countTraining[numTrainedMedian] = 0;
 	numTrainedMedian++;
-	for(int i=0;i<numLoop;i++){
-		for(int j=0;j<numCluster[i];j++){
-			for(int k=0;k<numTrainedMedian;k++){
-				if(square(savedX[k]-medianX[i][j])<=25&&square(savedY[k]-medianY[i][j])<=25){//median gets different
+	for (int i = 0;i < numLoop;i++) {
+		for (int j = 0;j < numCluster[i];j++) {
+			for (int k = 0;k < numTrainedMedian;k++) {
+				if (square(savedX[k] - medianX[i][j]) <= 25 && square(savedY[k] - medianY[i][j]) <= 25) {//median gets different
 					countTraining[k]++;
 					break;
 				}
-				else if(k+1==numTrainedMedian){
-					savedX[numTrainedMedian]=medianX[i][j];
-					savedY[numTrainedMedian]=medianY[i][j];
-					countTraining[numTrainedMedian]=0;
+				else if (k + 1 == numTrainedMedian) {
+					savedX[numTrainedMedian] = medianX[i][j];
+					savedY[numTrainedMedian] = medianY[i][j];
+					countTraining[numTrainedMedian] = 0;
 					numTrainedMedian++;
 				}
 			}
@@ -340,15 +346,15 @@ int main(){
 	//for(int i=0;i<numTrainedMedian;i++){
 	//	cout<<countTraining[i]<<endl;
 	//}
-	int numSelectedMedCorner=0;
-	int* cornerToMatchX=new int[numTrainedMedian];//////////////////////////////////////////////////////////////////////////////////
-	int* cornerToMatchY=new int[numTrainedMedian];//////////////////////////////////////////////////////////////////////////////////
+	int numSelectedMedCorner = 0;
+	int* cornerToMatchX = new int[numTrainedMedian];//////////////////////////////////////////////////////////////////////////////////
+	int* cornerToMatchY = new int[numTrainedMedian];//////////////////////////////////////////////////////////////////////////////////
 	//filtering the points
-	for(int i=0;i<numTrainedMedian;i++){
-		if(0.9*numTrainingPictures<countTraining[i]){
+	for (int i = 0;i < numTrainedMedian;i++) {
+		if (0.9*numTrainingPictures < countTraining[i]) {
 			//cout<<0.9*numTrainingPictures<<endl;
-			cornerToMatchX[numSelectedMedCorner]=savedX[i];
-			cornerToMatchY[numSelectedMedCorner]=savedY[i];
+			cornerToMatchX[numSelectedMedCorner] = savedX[i];
+			cornerToMatchY[numSelectedMedCorner] = savedY[i];
 			numSelectedMedCorner++;
 		}
 	}
@@ -358,7 +364,7 @@ int main(){
 	//cout<<endl;
 
 	//Start camcorder and motion detection
-	const int SIZE3=150;
+	const int SIZE3 = 600;
 	int realX[SIZE3];
 	int realY[SIZE3];
 	int realXCluster[SIZE3][30];
@@ -371,131 +377,305 @@ int main(){
 	bool firstFinal[SIZE3];
 	bool full[SIZE3];
 	cap.open("Survey.avi");
-	if(!cap.isOpened()){
-		cout<<"Error opening video stream of file"<<endl;
+	if (!cap.isOpened()) {
+		cout << "Error opening video stream of file" << endl;
 		system("pause");
 		return 0;
 	}
-	numLoop=0;
-	for(int i=0;i<numSelectedMedCorner;i++){
-		count4[i]=0;
-		firstFinal[i]=true;
-		full[i]=false;
+	numLoop = 0;
+	for (int i = 0;i < numSelectedMedCorner;i++) {
+		count4[i] = 0;
+		firstFinal[i] = true;
+		full[i] = false;
 	}
-	bool skip=false;
-	while(1){
-		cap>>src;
-		if(src.empty()){
+	bool skip = false;
+	int totalDetected = 0;
+	bool detected = false;
+	bool in = false;
+	static int prevMatrix[640][480];
+	int countError = 0;
+	int tooManySimilar = 0;
+	int tooManySimilarCompared = 0;
+	int tooManySimilarFirst = 0;
+	bool firstException = false;
+	time_t start, end;
+	VideoWriter video("C:\\Users\\xx1le\\Desktop\\Segment.avi", VideoWriter::fourcc('M', 'J', 'P', 'G'), 10, Size(640, 480), true);
+	bool yes = false;
+	int diff;
+	int totalDiff=0;
+	cap >> src;
+	//if (src.empty()) {
+	//	break;
+	//}
+	//if(!skip){
+		//cvtColor(src,src,COLOR_BGR2GRAY);
+	//cvtColor(src,src_gray,COLOR_BGR2GRAY);
+	Size size = src.size();
+	if (detected) {
+		//cout<<"test1"<<endl;
+	}
+	cvtColor(src, src_gray, COLOR_BGR2GRAY);
+
+	int blockSize = 2;
+	int apertureSize = 3;
+	double k = 0.04;
+	tempMat = Mat::zeros(size, CV_32FC1);
+	cornerHarris(src_gray, tempMat, blockSize, apertureSize, k);
+	normalize(tempMat, src_gray, 0, 255, NORM_MINMAX, CV_32FC1, Mat());
+	for (int i = 0; i < src_gray.rows; i++)
+	{
+		for (int j = 0; j < src_gray.cols; j++)
+		{
+			prevMatrix[i][j] = ((int)src_gray.at<float>(i, j));
+		}
+	}
+	int countFinal = 0;
+	bool turnOff = true;
+	while (1) {
+		cap >> src;
+		if (src.empty()) {
 			break;
 		}
-		if(!skip){
-		cvtColor(src,src_gray,COLOR_BGR2GRAY);
+		//if(!skip){
+			//cvtColor(src,src,COLOR_BGR2GRAY);
+		//cvtColor(src,src_gray,COLOR_BGR2GRAY);
+		Size size = src.size();
+		if (detected) {
+			//cout<<"test1"<<endl;
+		}
+		cvtColor(src, src_gray, COLOR_BGR2GRAY);
 
 		int blockSize = 2;
 		int apertureSize = 3;
 		double k = 0.04;
-
-		Mat dst = Mat::zeros( src.size(), CV_32FC1 );
-		cornerHarris( src_gray, dst, blockSize, apertureSize, k );
-
-		Mat dst_norm, dst_norm_scaled;
-		normalize( dst, dst_norm, 0, 255, NORM_MINMAX, CV_32FC1, Mat() );
-		convertScaleAbs( dst_norm, dst_norm_scaled );
-		numCornersEachLoop=0;
-		for( int i = 0; i < dst_norm.rows ; i++ )
-		{
-			for( int j = 0; j < dst_norm.cols; j++ )
+		if (detected) {
+			//cout<<"test2"<<endl;
+		}
+		Mat tempMat = Mat::zeros(size, CV_32FC1);
+		cornerHarris(src_gray, tempMat, blockSize, apertureSize, k);
+		if (detected) {
+			//cout<<"test3"<<endl;
+		}
+		//Mat dst_norm;//, dst_norm_scaled;
+		//Mat temp2;
+		normalize(tempMat, src_gray, 0, 255, NORM_MINMAX, CV_32FC1, Mat());
+		if (detected) {
+			//cout<<"test4"<<endl;
+		}
+		//convertScaleAbs( dst_norm, dst_norm_scaled );
+		numCornersEachLoop = 0;
+		/*if(detected){
+			for( int i = 0; i < src_gray.rows ; i++ )
 			{
-				if( (int) dst_norm.at<float>(i,j) > thresh )//tried to be the same
+				for( int j = 0; j < src_gray.cols; j++ )
 				{
-					//circle( dst_norm_scaled, Point(j,i), 5,  Scalar(0), 2, 8, 0 );
-					//circle( src, Point(j,i), 5,  Scalar(0), 2, 8, 0 );
-					realX[numCornersEachLoop]=j;
-					realY[numCornersEachLoop]=i;
-					numCornersEachLoop++;
+					src_gray.at<float>(i,j) = src_gray.at<float>(i,j)/1000;
 				}
 			}
-		}
-		for(int i=0;i<numCornersEachLoop-1;i++){
-			for(int j=i+1;j<numCornersEachLoop;j++){
-				temp2=realX[i];
-				realX[i]=realX[j];
-				realX[j]=temp2;
-				temp2=realY[i];
-				realY[i]=realY[j];
-				realY[j]=temp2;
+		}*/
+		//Integers overflow arithmetic
+		if (!detected) {
+			cout << "why1" << endl;
+			tooManySimilar = 0;
+			for (int i = 0; i < src_gray.rows; i++)
+			{
+				for (int j = 0; j < src_gray.cols; j++)
+				{
+					if (firstException&&abs(prevMatrix[i][j] - ((int)src_gray.at<float>(i, j))) > 16) {
+						src_gray.at<float>(i, j) = 0;
+						tooManySimilar++;
+					}
+					if ((int)src_gray.at<float>(i, j) > (thresh))//tried to be the same
+					{
+						//circle( dst_norm_scaled, Point(j,i), 5,  Scalar(0), 2, 8, 0 );
+						//circle( src, Point(j,i), 5,  Scalar(0), 2, 8, 0 );
+						realX[numCornersEachLoop] = j;
+						realY[numCornersEachLoop] = i;
+						numCornersEachLoop++;
+						//if(detected){
+						//	cout<<"test5"<<endl;
+						//}
+					}
+					
+				}
+			}
+			cout << "too " << tooManySimilar << endl;
+			if (firstException == true && tooManySimilar < 1000) {
+				cout << "off" << endl;
+				turnOff = true;
+			}
+			else if (tooManySimilar < 10) {
+				firstException = false;
+				// = true;
+			}
+			else {
+				turnOff = false;
 			}
 		}
-		count3=0;
-		repeatX=false;
-		prev=realX[0];
-		bool first=true;
+		else {
+			cout << "why2" << endl;
+			//if (tooManySimilarFirst == 0) {
+			//	firstException = true;
+			//}
+			tooManySimilar = 0;
+			for (int i = 0; i < src_gray.rows; i++)
+			{
+				for (int j = 0; j < src_gray.cols; j++)
+				{
+					//if(square(prevMatrix[i][j] - ((int) src_gray.at<float>(i,j)))>9){
+					//	cout<<"Black "<<((int) src_gray.at<float>(i,j))<<endl;
+					//}
+					//if( ((int) src_gray.at<float>(i,j)) == 116){
+					if (abs(prevMatrix[i][j] - ((int)src_gray.at<float>(i, j)))>16) {
+						src_gray.at<float>(i, j) = 0;
+						//cout << "zero" << endl;
+						tooManySimilar++;
+					}
+					
+					/*if(countError < 10 && square(prevMatrix[i][j] - ((int) src_gray.at<float>(i,j)))>9){
+						src_gray.at<float>(i,j) = 0;
+						if (firstException) {
+							tooManySimilarFirst++;
+						}
+						tooManySimilar++;
+						
+					}
+					else if(countError>=5){
+						//countError = 0;
+						tooManySimilarCompared++;
+						
+					}*/
+					//if (i + 1 == src_gray.rows && j+1==src_gray.cols) {
+					//	if (tooManySimilar > 50) {
+					//		countError++;
+					//	}
+					//	firstException = false;
+					//	//cout << tooManySimilar << endl;
+					//}
+					if (((int)src_gray.at<float>(i, j)) > (thresh))//tried to be the same
+					{
+						//circle( dst_norm_scaled, Point(j,i), 5,  Scalar(0), 2, 8, 0 );
+						//circle( src, Point(j,i), 5,  Scalar(0), 2, 8, 0 );
+						realX[numCornersEachLoop] = j;
+						realY[numCornersEachLoop] = i;
+						numCornersEachLoop++;
+						//if(detected){
+						//	cout<<"test5"<<endl;
+						//}
+					}
+				}
+			}
+			cout <<"too "<< tooManySimilar << endl;
+			if (firstException == true && tooManySimilar < 1000) {
+				cout << "off" << endl;
+				turnOff = true;
+			}
+			else if (tooManySimilar < 10) {
+				firstException = false;
+				//turnOff = true;
+			}
+			else {
+				turnOff = false;
+			}
 
-		for(int i=0;i<numCornersEachLoop-1;i++){
-			count3=0;
-			if(first){
-				first=false;
-				beginning=i;
-				prev=realX[i];
+			//if (square(tooManySimilarCompared - tooManySimilarFirst)>25) {
+			//	countError = 0;
+			//	tooManySimilarCompared = 0;
+			//}
+		}
+		if (detected) {
+			//cout<<"test5_1"<<endl;
+		}
+		for (int i = 0;i < numCornersEachLoop - 1;i++) {
+			for (int j = i + 1;j < numCornersEachLoop;j++) {
+				temp2 = realX[i];
+				realX[i] = realX[j];
+				realX[j] = temp2;
+				temp2 = realY[i];
+				realY[i] = realY[j];
+				realY[j] = temp2;
 			}
-			else{
-				while(i+count3+1<numCornersEachLoop&&square(prev-realX[i+count3+1])<=diffEachSetSquaredX){
+		}
+		count3 = 0;
+		repeatX = false;
+		prev = realX[0];
+		bool first = true;
+		if (detected) {
+			//cout<<"test6"<<endl;
+		}
+		for (int i = 0;i < numCornersEachLoop - 1;i++) {
+			count3 = 0;
+			if (first) {
+				first = false;
+				beginning = i;
+				prev = realX[i];
+			}
+			else {
+				while (i + count3 + 1 < numCornersEachLoop&&square(prev - realX[i + count3 + 1]) <= diffEachSetSquaredX) {
 					count3++;
-					repeatX=true;
+					repeatX = true;
 				}
-				if(repeatX){
-					i=i+count3+1;
-					for(int j=beginning;j<i-beginning-1+beginning;j++){
-						for(int k=j+1;k<i-beginning+beginning;k++){
-							if(realY[j]>realY[k]){
-								temp2=realY[j];
-								realY[j]=realY[k];
-								realY[k]=temp2;
-								temp2=realX[j];
-								realX[j]=realX[k];
-								realX[k]=temp2;
+				if (repeatX) {
+					i = i + count3 + 1;
+					for (int j = beginning;j < i - beginning - 1 + beginning;j++) {
+						for (int k = j + 1;k < i - beginning + beginning;k++) {
+							if (realY[j] > realY[k]) {
+								temp2 = realY[j];
+								realY[j] = realY[k];
+								realY[k] = temp2;
+								temp2 = realX[j];
+								realX[j] = realX[k];
+								realX[k] = temp2;
 							}
 						}
 					}
 					i--;
-					repeatX=false;
+					repeatX = false;
 				}
-				first=true;
+				first = true;
 			}
 		}
-		count=0;
-		bool newSet=true;
-		for(int i=0;i<numCornersEachLoop;i++){
-			if(newSet){
-				numPtsEachCluster2[count]=0;
-				realXCluster[count][numPtsEachCluster2[count]]=realX[i];
-				realYCluster[count][numPtsEachCluster2[count]]=realY[i];
+		count = 0;
+		bool newSet = true;
+		if (detected) {
+			//cout<<"test7"<<endl;
+		}
+		in = false;
+		for (int i = 0;i < numCornersEachLoop;i++) {
+			if (newSet) {
+				numPtsEachCluster2[count] = 0;
+				realXCluster[count][numPtsEachCluster2[count]] = realX[i];
+				realYCluster[count][numPtsEachCluster2[count]] = realY[i];
 				numPtsEachCluster2[count]++;
-				newSet=false;
+				newSet = false;
+				in = true;
 			}
-			else{
-				if((square(realXCluster[count][0] - realX[i]) > 49)||(square(realYCluster[count][0] - realY[i]) > 49)){
-					newSet=true;
+			else {
+				if ((square(realXCluster[count][0] - realX[i]) > 49) || (square(realYCluster[count][0] - realY[i]) > 49)) {
+					newSet = true;
 					count++;
 					i--;
 				}
-				else{
-					realXCluster[count][numPtsEachCluster2[count]]=realX[i];
-					realYCluster[count][numPtsEachCluster2[count]]=realY[i];
+				else {
+					realXCluster[count][numPtsEachCluster2[count]] = realX[i];
+					realYCluster[count][numPtsEachCluster2[count]] = realY[i];
 					numPtsEachCluster2[count]++;
 				}
 			}
 		}
-		count++;
-		
-		for(int i=0;i<count;i++){
-			if(numPtsEachCluster2[i]%2==0){
-				realMedianX[i]=(realXCluster[i][numPtsEachCluster2[i]/2-1]+realXCluster[i][numPtsEachCluster2[i]/2])/2.0;
-				realMedianY[i]=(realYCluster[i][numPtsEachCluster2[i]/2-1]+realYCluster[i][numPtsEachCluster2[i]/2])/2.0;
+		if (in) {
+			count++;
+		}
+		//cout<<"count "<<count<<endl;
+		for (int i = 0;i < count;i++) {
+			//cout<<numPtsEachCluster2[i]<<endl;
+			if (numPtsEachCluster2[i] % 2 == 0) {
+				realMedianX[i] = (realXCluster[i][numPtsEachCluster2[i] / 2 - 1] + realXCluster[i][numPtsEachCluster2[i] / 2]) / 2.0;
+				realMedianY[i] = (realYCluster[i][numPtsEachCluster2[i] / 2 - 1] + realYCluster[i][numPtsEachCluster2[i] / 2]) / 2.0;
 			}
-			else{
-				realMedianX[i]=realXCluster[i][numPtsEachCluster2[i]/2];
-				realMedianY[i]=realYCluster[i][numPtsEachCluster2[i]/2];
+			else {
+				realMedianX[i] = realXCluster[i][numPtsEachCluster2[i] / 2];
+				realMedianY[i] = realYCluster[i][numPtsEachCluster2[i] / 2];
 			}
 			//circle( src, Point(j,i), 5,  Scalar(0), 2, 8, 0 );
 			//circle( src, Point(realMedianY[i],realMedianX[i]), 5,  Scalar(0), 2, 8, 0 );
@@ -514,116 +694,170 @@ int main(){
 		//}
 		//cout<<endl;
 		//system("pause");
-		bool noMatched=true;
-		int count2=0;
-		int numDissappeared=5;
-		
+		if (detected) {
+			//cout<<"test8"<<endl;
+		}
+		bool noMatched = true;
+		int count2 = 0;
+		int numDissappeared = 5;
+		bool nope = false;
 		//Motion detected if a point is blocked for three images
-		for(int i=0;i<numSelectedMedCorner;i++){
-			noMatched=false;
-			for(int j=0;j<count;j++){
-				//cout<<square(cornerToMatchX[i]-realMedianX[j])<<endl;
-				if(square(cornerToMatchX[i]-realMedianX[j])<9){
-					//cout<<"test2"<<endl;
-					//cout<<"passed"<<endl;
-					break;
-				}
-				else if(j+1==count){
-					//cout<<numLoop<<" test "<<i<<endl;
-					//system("pause");
-					noMatched=true;
-				}
-			}
-			count2=0;
-			if(firstFinal[i]){
-				count4[i]=0;
-				firstFinal[i]=false;
-			}
-			else{
-				if(full[i]){
-					count2=0;
-					for(int j=0;j<count4[i]+1-1;j++){///////////////////////////had a stuck here
-						lastingMemory[i][j]=lastingMemory[i][j+1];
-						if(lastingMemory[i][j]==false){
-							count2++;
-						}
-					}
-					if(count2==numDissappeared-1&&noMatched){
-						cout<<"Motion Detected"<<endl;
-						/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-						Mat img = src;
-						int size=640*480;
-						//SAString sBytes((const void*)img.data, size * sizeof(byte));
-						string blue="";
-						string green="";
-						string red="";
-						SAConnection con;
-						try {
-							con.Connect(_TSA("ImageImage.mssql.sample.com@ImageImage"), _TSA("xx2level2xx_Sample"), _TSA("sample"), SA_SQLServer_Client);
-							cout<<"connected"<<endl;
-							SACommand insert(&con);
-							for(int r=0;r<640;r++){
-								blue="";
-								green="";
-								red="";
-								insert.setCommandText(_TSA("INSERT INTO Test2 (ID, ImageStringGreen, ImageStringBlue, ImageStringRed) VALUES (:1, :2, :3, :4)"));
-								insert.Param(1).setAsLong() = r;
-								for(int c=0;c<480;c++){
-									//cout<<int2String((int)(img.at<Vec3b>(c, r).val[0]))<<" ";
-				
-									blue+=int2String((int)(img.at<Vec3b>(c, r).val[0]))+" ";
-				
-									green+=int2String((int)(img.at<Vec3b>(c, r).val[1]))+" ";
-				
-									red+=int2String((int)(img.at<Vec3b>(c, r).val[2]))+" ";
-								}
-								//insert << (long)r << blue.c_str() << green.c_str() << red.c_str();
-								insert.Param(2).setAsString() = blue.c_str();
-								insert.Param(3).setAsString() = green.c_str();
-								insert.Param(4).setAsString() = red.c_str();
-								insert.Execute();
+		numSelectedMedCorner = 5;
+		//cout<<"count "<<count<<endl;
+		//cout<<"numSelectedMedCorner "<<numSelectedMedCorner<<endl;
+		//cout<<cornerToMatchX[0]<<endl;
+		cout << "!detected" << !detected << endl;
+		cout << "firstException" << firstException << endl;
+		if (!detected||firstException) {
+			for (int i = 0;i < numSelectedMedCorner;i++) {
+				noMatched = false;
+				//cout<<"test "<<cornerToMatchX[i]<<endl;
+				for (int j = 0;j < count;j++) {
+					//cout<<square(cornerToMatchX[i]-realMedianX[j])<<endl;
+					//assert(cornerToMatchX[i] != NULL);
+					//if (!detected) {
+						if (cornerToMatchX[i] != NULL && square(cornerToMatchX[i] - realMedianX[j]) < 9 && square(cornerToMatchY[i] - realMedianY[j]) < 9) {//Error prone
+							//cout<<"test2"<<endl;
+							//cout<<"passed"<<endl;
+							if (detected) {
+								//cout<<"test9"<<endl;
 							}
-							cout<<"inserted"<<endl;
-							con.Disconnect();
-							system("start www.sample4321.sample.com/WebForm1.aspx");
+							break;
 						}
-						catch(SAException &x) {
-							con.Rollback();
-							printf("%s\n", x.ErrText().GetMultiByteChars());
-						}
-						prev=numLoop;
-						//skip=true;
-						//break;
+					//}
+					else if (j + 1 == count) {
+						//cout<<numLoop<<" test "<<i<<endl;
 						//system("pause");
-						//return 0;
+						noMatched = true;
 					}
 				}
-			}
-			if(noMatched){
-				lastingMemory[i][count4[i]]=false;
-				
-			}
-			else{
-				lastingMemory[i][count4[i]]=true;
-			}
-			count4[i]++;
-			//if(count4[i]==2){
-				//cout<<count4[i]<<endl;
-			//}
-			cout<<"lastingMemory ";
-			for(int j=0;j<count4[i];j++){
-				cout<<lastingMemory[i][j]<<" ";
-			}
-			cout<<endl;
-			if((count4[i]==numDissappeared)&&full[i]==true){
-				count4[i]=numDissappeared-1;
-			}
-			else if(count4[i]==numDissappeared){
-				count4[i]=numDissappeared-1;
-				full[i]=true;
+				count2 = 0;
+				if (firstFinal[i]) {
+					count4[i] = 0;
+					firstFinal[i] = false;
+				}
+				else {
+					if (full[i]) {
+						count2 = 0;
+						nope = false;
+						for (int j = 0;j < count4[i] + 1 - 1;j++) {///////////////////////////had a stuck here
+							lastingMemory[i][j] = lastingMemory[i][j + 1];
+							if (lastingMemory[i][j] == true) {
+								nope = true;
+							}
+							if (lastingMemory[i][j] == false && nope == false) {/////////////////////////BIG BUG
+								count2++;
+							}
+						}
+						cout << "why" << endl;
+						if (count2 == numDissappeared - 1 && noMatched) {
+							cout << "Motion Detected" << endl;
+							if (!yes) {
+								time(&start);
+								yes = true;
+							}
+							else if (yes) {
+								//video.write(src);
+								time(&end);
+								if (totalDiff + difftime(end, start) > 2 && turnOff == false) {
+									yes = false;
+									totalDiff = 0;
+									cout << "yes" << endl;
+									system("pause");
+									detected = false;
+									//turnOff = true;
+								}
+								else {
+									cout << "test" << endl;
+									diff = difftime(end, start);
+									totalDiff += diff;
+									cout << totalDiff << endl;
+									time(&start);
+								}
+							}
+							detected = true;
+							firstException = true;
+							//take a few pictures
+							
+							//cout<<"total detected "<<totalDetected<<endl;
+							/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+							//Mat img = src;
+							//totalDetected++;
+							//int size = 640 * 480;
+							//SAString sBytes((const void*)img.data, size * sizeof(byte));
+							//system("pause");
+						}
+						else if(firstException==true){
+							cout << "test2" << endl;
+							if (!yes) {
+								time(&start);
+								yes = true;
+							}
+							else if (yes) {
+								//video.write(src);
+								time(&end);
+								if (totalDiff + difftime(end, start) > 2 && turnOff == false) {
+									yes = false;
+									totalDiff = 0;
+									cout << "yes" << endl;
+									system("pause");
+									detected = false;
+									//turnOff = true;
+								}
+								else {
+									cout << "test" << endl;
+									diff = difftime(end, start);
+									totalDiff += diff;
+									cout << totalDiff << endl;
+									time(&start);
+								}
+							}
+							//yes = false;
+							//detected = false;
+							tooManySimilarFirst = 0;
+							if (countFinal >= 10) {
+								detected = false;
+								firstException = false;
+							}
+							countFinal++;
+							firstException = true;
+							//yes = false;
+						}
+						else {
+							detected = false;
+							countFinal = 0;
+							cout << "no" << endl;
+						}
+					}
+				}
+				if (noMatched) {
+					lastingMemory[i][count4[i]] = false;//Picture does not have that corner anymore from the trained set
+
+				}
+				else {
+					lastingMemory[i][count4[i]] = true;
+				}
+				count4[i]++;
+				//if(count4[i]==2){
+					//cout<<count4[i]<<endl;
+				//}
+				//cout<<"lastingMemory ";
+				//cout<<"num"<<i<<" ";
+				//for(int j=0;j<count4[i];j++){
+				//	cout<<lastingMemory[i][j]<<" ";
+				//}
+				//cout<<endl;
+				if ((count4[i] == numDissappeared) && full[i] == true) {
+					count4[i] = numDissappeared - 1;
+				}
+				else if (count4[i] == numDissappeared) {
+					count4[i] = numDissappeared - 1;
+					full[i] = true;
+				}
+				//cout<<"passed"<<endl;
 			}
 		}
-		}
+		/*}
 		else{
 			if(numLoop-prev>30){
 				skip=false;
@@ -636,10 +870,10 @@ int main(){
 					lastingMemory[i][j]=true;
 				}
 			}
-		}
-		imshow("Frame",src);
+		}*/
+		imshow("Frame", src);
 		char c = (char)waitKey(25);
-		if(c==27){
+		if (c == 27) {
 			break;
 		}
 		numLoop++;
@@ -649,7 +883,7 @@ int main(){
 
 	//delete[] numCornersArr;
 	//delete[] corners;
-	for(int i=0;i<numTrainingPictures;i++){
+	for (int i = 0;i < numTrainingPictures;i++) {
 		delete[] x[i];
 		delete[] y[i];
 	}
@@ -659,45 +893,27 @@ int main(){
 
 	system("pause");
 	return 0;
+	//#pragma warning(pop)
 }
-double square(double num){
-	return num*num;
+double square(double num) {
+	return num * num;
 }
-int convert(string num){
-	int sum=0;
-	for(int i=0;i<num.length();i++){
-		sum+=power10(num.length()-i-1)*(num[i]-'0');
+int convert(string num) {
+	int sum = 0;
+	for (int i = 0;i < num.length();i++) {
+		sum += power10(num.length() - i - 1)*(num[i] - '0');
 	}
 	return sum;
 }
-int power10(int num){
-	int prod=1;
-	if(num==0){
+int power10(int num) {
+	int prod = 1;
+	if (num == 0) {
 		return 1;
 	}
-	else{
-		for(int i=1;i<=num;i++){
-			prod*=10;
+	else {
+		for (int i = 1;i <= num;i++) {
+			prod *= 10;
 		}
 	}
 	return prod;
-}
-string int2String(int num){
-	int power;
-	//num=230;
-	string tempStr="";
-	int temp;
-	for(int i=1;i<4;i++){
-		if(num%power10(i)==num){
-			power=i-1;
-			break;
-		}
-	}
-	for(int i=power;i>0;i--){
-		temp = num / power10(i);
-		tempStr += temp + '0';
-		num = num - temp * power10(i);
-	}
-	tempStr += num + '0';
-	return tempStr;
 }
